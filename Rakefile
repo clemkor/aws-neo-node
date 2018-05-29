@@ -11,7 +11,7 @@ require 'terraform_output'
 
 RakeTerraform.define_installation_tasks(
     path: File.join(Dir.pwd, 'vendor', 'terraform'),
-    version: '0.11.1')
+    version: '0.11.7')
 
 configuration = Confidante.configuration
 shared_configuration =
@@ -26,64 +26,11 @@ version = S3VersionFile.new(
 
 task :default => [
     :'bootstrap:plan',
-    :'blockchain_archive_lambda:plan',
-    :'ardor:image_repository:plan',
-    :'ardor:service:plan',
-    :'cert_manager:task:plan'
 ]
 
 namespace :version do
   task :bump do
     version.bump(:revision)
-  end
-end
-
-namespace :virtualenv do
-  task :create do
-    mkdir_p 'vendor'
-    sh 'virtualenv vendor/virtualenv --always-copy'
-  end
-
-  task :destroy do
-    rm_rf 'vendor/virtualenv'
-  end
-
-  task :ensure do
-    unless File.exists?('vendor/virtualenv')
-      Rake::Task['virtualenv:create'].invoke
-    end
-  end
-end
-
-namespace :dependencies do
-  namespace :install do
-    task :blockchain_archive_lambda => ['virtualenv:ensure'] do
-      puts 'Installing dependencies for blockchain archive lambda'
-
-      sh_in_virtualenv(
-          'pip', 'install -r ' +
-          'infra/blockchain-archive-lambda/' +
-          'lambda-definitions/blockchain-archive/requirements.txt')
-    end
-
-    task :all => ['dependencies:install:blockchain_archive_lambda']
-  end
-end
-
-namespace :test do
-  namespace :unit do
-    task :blockchain_archive_lambda => [
-        'dependencies:install:blockchain_archive_lambda'
-    ] do
-      puts 'Running unit tests for blockchain archive lambda'
-
-      sh_in_virtualenv(
-          'python', '-m unittest discover -s ' +
-              'infra/blockchain-archive-lambda/' +
-              'lambda-definitions/blockchain-archive')
-    end
-
-    task :all => ['test:unit:blockchain_archive_lambda']
   end
 end
 
@@ -120,65 +67,10 @@ namespace :bootstrap do
   end
 end
 
-
-namespace :blockchain_archive_lambda do
-  task :prepare => [
-      'terraform:ensure',
-      'dependencies:install:blockchain_archive_lambda'
-  ] do
-    rm_rf('build/lambda-definitions/blockchain-archive')
-    mkdir_p('build/lambda-definitions/blockchain-archive')
-    cp_r(
-        'infra/blockchain-archive-lambda/lambda-definitions/blockchain-archive/.',
-        'build/lambda-definitions/blockchain-archive')
-    cp_r(
-        'vendor/virtualenv/lib/python3.6/site-packages/.',
-        'build/lambda-definitions/blockchain-archive')
-  end
-
-  RakeTerraform.define_command_tasks do |t|
-    t.argument_names = [:specific_deployment_identifier]
-
-    t.ensure_task = 'blockchain_archive_lambda:prepare'
-
-    t.configuration_name = 'blockchain archive lambda'
-    t.source_directory = 'infra/blockchain-archive-lambda'
-    t.work_directory = 'build'
-
-    t.backend_config = lambda do |args|
-      deployment =
-          configuration
-              .for_overrides(args)
-              .specific_deployment_identifier
-
-      configuration
-          .for_overrides(args)
-          .for_scope(
-              role: 'blockchain-archive-lambda',
-              deployment: deployment)
-          .backend_config
-    end
-
-    t.vars = lambda do |args|
-      deployment =
-          configuration
-              .for_overrides(args)
-              .specific_deployment_identifier
-
-      configuration
-          .for_overrides(args)
-          .for_scope(
-              role: 'blockchain-archive-lambda',
-              deployment: deployment)
-          .vars
-    end
-  end
-end
-
-namespace :ardor do
+namespace :neo do
   namespace :image_repository do
     RakeTerraform.define_command_tasks do |t|
-      t.configuration_name = 'Ardor image repository'
+      t.configuration_name = 'Neo image repository'
       t.source_directory = 'infra/image-repository'
       t.work_directory = 'build'
 
@@ -187,7 +79,7 @@ namespace :ardor do
             .for_overrides(
                 shared_deployment_identifier: 'default')
             .for_scope(
-                role: 'ardor-image-repository',
+                role: 'neo-image-repository',
                 deployment: 'default')
             .backend_config
       end
@@ -197,7 +89,7 @@ namespace :ardor do
             .for_overrides(
                 shared_deployment_identifier: 'default')
             .for_scope(
-                role: 'ardor-image-repository',
+                role: 'neo-image-repository',
                 deployment: 'default')
             .vars
       end
@@ -206,18 +98,14 @@ namespace :ardor do
 
   namespace :image do
     RakeDocker.define_image_tasks do |t|
-      t.image_name = 'aws-ardor'
+      t.image_name = 'aws-neo'
       t.work_directory = 'build/images'
 
       t.copy_spec = [
-          {from: 'src/ardor/Dockerfile', to: 'Dockerfile'},
-          {from: 'src/ardor/ardor.sh', to: 'ardor.sh'},
-          {from: 'src/ardor/ardor.properties.template',
-           to: 'ardor.properties.template'},
-          {from: 'src/ardor/ardor-default.env', to: 'ardor-default.env'}
+          {from: 'src/Dockerfile', to: 'Dockerfile'},
       ]
 
-      t.repository_name = 'eth-quest/aws-ardor'
+      t.repository_name = 'eth-quest/aws-neo'
       t.repository_url = lambda do
         backend_config =
             configuration
@@ -241,7 +129,7 @@ namespace :ardor do
                 .for_overrides(
                     shared_deployment_identifier: 'default')
                 .for_scope(
-                    role: 'ardor-image-repository',
+                    role: 'neo-image-repository',
                     deployment: 'default')
 
         backend_config = configuration.backend_config
@@ -266,10 +154,10 @@ namespace :ardor do
 
     task :publish => [
         'version:bump',
-        'ardor:image:clean',
-        'ardor:image:build',
-        'ardor:image:tag',
-        'ardor:image:push'
+        'neo:image:clean',
+        'neo:image:build',
+        'neo:image:tag',
+        'neo:image:push'
     ]
   end
 
@@ -281,8 +169,8 @@ namespace :ardor do
           :environment_deployment_identifier
       ]
 
-      t.configuration_name = 'Ardor service'
-      t.source_directory = 'infra/ardor-service'
+      t.configuration_name = 'Neo service'
+      t.source_directory = 'infra/neo-service'
       t.work_directory = 'build'
 
       t.backend_config = lambda do |args|
@@ -294,7 +182,7 @@ namespace :ardor do
         configuration
             .for_overrides(args)
             .for_scope(
-                role: 'ardor-service',
+                role: 'neo-service',
                 deployment: deployment_identifier)
             .backend_config
       end
@@ -303,76 +191,20 @@ namespace :ardor do
         deployment =
             configuration
                 .for_overrides(args)
-                .for_scope(role: 'ardor-service')
+                .for_scope(role: 'neo-service')
                 .specific_deployment_identifier
 
         ardor_node_config = YAML.load_file(
-            'config/secrets/ardor/%s.yaml' % deployment)
+            'config/secrets/neo/%s.yaml' % deployment)
 
         configuration
             .for_overrides(args.to_hash.merge(
-                'ardor_node_version_number' => version.refresh.to_s,
-                'admin_password' => ardor_node_config['admin_password'],
-                'key_store_password' => ardor_node_config['key_store_password']))
+                'neo_node_version_number' => version.refresh.to_s))
             .for_scope(
-                role: 'ardor-service',
+                role: 'neo-service',
                 deployment: deployment)
             .vars
       end
     end
   end
-end
-
-namespace :cert_manager do
-  namespace :task do
-    RakeTerraform.define_command_tasks do |t|
-      t.argument_names = [
-          :specific_deployment_identifier,
-          :shared_deployment_identifier,
-          :environment_deployment_identifier
-      ]
-
-      t.configuration_name = 'cert manager task'
-      t.source_directory = 'infra/cert-manager-task'
-      t.work_directory = 'build'
-
-      t.backend_config = lambda do |args|
-        deployment_identifier =
-            configuration
-                .for_overrides(args)
-                .deployment_identifier
-
-        configuration
-            .for_overrides(args)
-            .for_scope(
-                role: 'cert-manager-task',
-                deployment: deployment_identifier)
-            .backend_config
-      end
-
-      t.vars = lambda do |args|
-        deployment =
-            configuration
-                .for_overrides(args)
-                .for_scope(role: 'cert-manager-task')
-                .specific_deployment_identifier
-
-        ardor_node_config = YAML.load_file(
-            'config/secrets/ardor/%s.yaml' % deployment)
-
-        configuration
-            .for_overrides(args.to_hash.merge(
-                'key_store_password' => ardor_node_config['key_store_password']))
-            .for_scope(
-                role: 'cert-manager-task',
-                deployment: deployment)
-            .vars
-      end
-    end
-  end
-end
-
-def sh_in_virtualenv command, argument_string
-  sh "#{File.expand_path('vendor/virtualenv/bin')}/#{command} " +
-         "#{argument_string}"
 end

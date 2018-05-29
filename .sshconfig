@@ -1,0 +1,24 @@
+Host bastion-environment-dev.eth-quest.net
+  IdentityFile "config/secrets/keys/bastion/ssh.private"
+
+Host 10.*
+  IdentityFile "config/secrets/keys/cluster/ssh.private"
+  ProxyCommand ssh -F .sshconfig bastion-environment-dev.eth-quest.net -W %h:%p
+
+Host *
+  Compression yes
+  CompressionLevel 9
+  ControlMaster         auto
+  ControlPersist        30m
+  User ec2user
+  ConnectTimeout 120
+  ServerAliveInterval 20
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  PubkeyAuthentication yes
+  ChallengeResponseAuthentication no
+  GSSAPIAuthentication no
+  PasswordAuthentication no
+  RSAAuthentication no
+  RhostsRSAAuthentication no
+  KbdInteractiveAuthentication no
