@@ -1,0 +1,16 @@
+#!/usr/bin/expect -f
+
+set script_path [info script]
+set script_dir [file dirname "$script_path"]
+set neo_cli_dir [file normalize "$script_dir/.."]
+set timeout -1
+
+cd "$neo_cli_dir"
+
+spawn dotnet neo-cli.dll /rpc
+
+expect "neo>"
+send "start consensus\n"
+expect "OnStart"
+
+interact

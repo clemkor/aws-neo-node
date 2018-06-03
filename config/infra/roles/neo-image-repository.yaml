@@ -1,0 +1,11 @@
+---
+vars:
+  region: "%{hiera('region')}"
+
+  image_name: 'aws-neo'
+
+backend_config:
+  bucket: "%{hiera('neo_image_repository_state_bucket_name')}"
+  key: "%{hiera('neo_image_repository_state_key')}"
+  region: "%{hiera('region')}"
+  encrypt: "true"

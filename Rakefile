@@ -26,6 +26,7 @@ version = S3VersionFile.new(
 
 task :default => [
     :'bootstrap:plan',
+    :'neo:image_repository:plan',
 ]
 
 namespace :version do
@@ -102,7 +103,8 @@ namespace :neo do
       t.work_directory = 'build/images'
 
       t.copy_spec = [
-          {from: 'src/Dockerfile', to: 'Dockerfile'},
+          {from: 'src/neo/Dockerfile', to: 'Dockerfile'},
+          {from: 'src/neo/start-consensus', to: 'start-consensus'},
       ]
 
       t.repository_name = 'eth-quest/aws-neo'
@@ -193,9 +195,6 @@ namespace :neo do
                 .for_overrides(args)
                 .for_scope(role: 'neo-service')
                 .specific_deployment_identifier
-
-        ardor_node_config = YAML.load_file(
-            'config/secrets/neo/%s.yaml' % deployment)
 
         configuration
             .for_overrides(args.to_hash.merge(

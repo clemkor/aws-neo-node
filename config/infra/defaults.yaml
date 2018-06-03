@@ -8,6 +8,8 @@ specific_storage_bucket_name: "eth-quest-%{hiera('component')}-storage-%{hiera('
 
 image_version_key: "metadata/version"
 
+blockchain_archive_url: "https://neo.org/client/chain.acc.zip"
+
 common_state_bucket_name: "eth-quest-global-storage-default"
 common_state_key: "deployment-state/common/default.tfstate"
 
@@ -16,3 +18,6 @@ network_state_key: "deployment-state/network/default.tfstate"
 
 cluster_state_bucket_name: "eth-quest-environment-storage-%{hiera('environment_deployment_identifier')}"
 cluster_state_key: "deployment-state/cluster/default.tfstate"
+
+neo_image_repository_state_bucket_name: "%{hiera('shared_storage_bucket_name')}"
+neo_image_repository_state_key: "deployment-state/neo-image-repository/default.tfstate"
