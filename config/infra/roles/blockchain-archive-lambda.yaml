@@ -1,0 +1,16 @@
+---
+vars:
+  region: "%{hiera('region')}"
+
+  deployment_identifier: "%{hiera('specific_deployment_identifier')}"
+
+  blockchain_archive_url: "%{hiera('blockchain_archive_url')}"
+  blockchain_archive_bucket_name: "%{hiera('blockchain_archive_bucket_name')}"
+  blockchain_archive_key: "%{hiera('blockchain_archive_key')}"
+  blockchain_archive_chunk_size_bytes: "%{hiera('blockchain_archive_chunk_size_bytes')}"
+
+backend_config:
+  bucket: "%{hiera('blockchain_archive_lambda_state_bucket_name')}"
+  key: "%{hiera('blockchain_archive_lambda_state_key')}"
+  region: "%{hiera('region')}"
+  encrypt: "true"

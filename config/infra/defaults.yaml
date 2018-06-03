@@ -8,7 +8,11 @@ specific_storage_bucket_name: "eth-quest-%{hiera('component')}-storage-%{hiera('
 
 image_version_key: "metadata/version"
 
-blockchain_archive_url: "https://neo.org/client/chain.acc.zip"
+#blockchain_archive_url: "https://neo.org/client/chain.acc.zip"
+blockchain_archive_url: "https://drive.google.com/uc?export=download&confirm=bFzk&id=1tB6HjS89tsNPH890jB6NnOfgiaO8ckI_"
+blockchain_archive_bucket_name: "eth-quest-neo-node-data-%{hiera('specific_deployment_identifier')}"
+blockchain_archive_key: "neo-node/blockchain-archive/chain.acc.zip"
+blockchain_archive_chunk_size_bytes: 10485760
 
 common_state_bucket_name: "eth-quest-global-storage-default"
 common_state_key: "deployment-state/common/default.tfstate"
@@ -21,3 +25,7 @@ cluster_state_key: "deployment-state/cluster/default.tfstate"
 
 neo_image_repository_state_bucket_name: "%{hiera('shared_storage_bucket_name')}"
 neo_image_repository_state_key: "deployment-state/neo-image-repository/default.tfstate"
+
+blockchain_archive_lambda_state_bucket_name: "%{hiera('specific_storage_bucket_name')}"
+blockchain_archive_lambda_state_key: "deployment-state/blockchain-archive-lambda/default.tfstate"
+
